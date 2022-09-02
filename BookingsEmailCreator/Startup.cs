@@ -1,4 +1,5 @@
 using BookingsEmailCreator.Data.Db;
+using BookingsEmailCreator.Data.Emails;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
@@ -47,7 +48,7 @@ public class Startup
         // Add services to the container.
         services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
             .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAd"))
-            .EnableTokenAcquisitionToCallDownstreamApi()
+            .EnableTokenAcquisitionToCallDownstreamApi(Configuration.GetValue<string[]>("DownstreamApi:Scopes"))
             .AddMicrosoftGraph(Configuration.GetSection("DownstreamApi"))
             .AddInMemoryTokenCaches();
 
@@ -59,6 +60,9 @@ public class Startup
             // By default, all incoming requests will be authorized according to the default policy
             // options.FallbackPolicy = options.DefaultPolicy;
         });
+
+        services.AddScoped<IAccountService, AccountService>()
+            .AddScoped<IEmailTemplateService, EmailTemplateService>();
 
         services.AddRazorPages();
         services.AddServerSideBlazor()
@@ -82,6 +86,10 @@ public class Startup
         // Execute Migrations
         app.UseMigrationsEndPoint();
 
+        var factory = app.ApplicationServices.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        using (var dbContext = factory.CreateDbContext())
+            ApplyDatabaseMigrations(dbContext);
+
         app.UseHttpsRedirection();
 
         app.UseStaticFiles();
@@ -97,5 +105,16 @@ public class Startup
             options.MapBlazorHub();
             options.MapFallbackToPage("/_Host");
         });
+    }
+
+    private static void ApplyDatabaseMigrations(DbContext database)
+    {
+        if (!(database.Database.GetPendingMigrations()).Any())
+        {
+            return;
+        }
+
+        database.Database.Migrate();
+        database.SaveChanges();
     }
 }

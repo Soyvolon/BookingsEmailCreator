@@ -2,13 +2,13 @@
 
 <h3>Templates</h3>
 
-
-<EditForm class="p-2">
-
-    <div class="row">
-        <div class="col">
-            
-        </div>
-    </div>
-
-</EditForm>
+<AuthorizeView>
+    <Authorized>
+        <EditForm Model="this" class="p-2 d-flex" Context="TemplatesEditContext">
+            <h1>Hi</h1>
+        </EditForm>
+    </Authorized>
+    <NotAuthorized>
+        <h3>Please login to access this page.</h3>
+    </NotAuthorized>
+</AuthorizeView>
